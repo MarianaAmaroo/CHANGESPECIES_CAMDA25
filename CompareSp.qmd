@@ -1,0 +1,112 @@
+---
+title: "Compare NCBI and CAMDA species"
+author: "Mariana Amaro"
+format: html
+editor: visual
+---
+
+Charge R libraries
+
+```{r}
+# This are the libraries that we need to charge
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(tidyr)
+library(viridis)
+library(readxl)
+
+
+```
+
+Upload the database
+
+```{r}
+training_dataset <- read_excel("C:/Users/52462/OneDrive/Documentos/CAMDA2025/CAMDA25/training_dataset.xlsx")
+sra_metadata <- read_excel("C:/Users/52462/OneDrive/Documentos/CAMDA2025/CAMDA25/sra-metadata.xlsx")
+```
+
+Normalizar los titulos de las columnas de especies
+
+```{r}
+
+# 1. Procesar columnas de especie (juntar genus y species)
+training_dataset <- training_dataset %>%
+  mutate(
+    accession = as.character(accession),
+    full_name = str_squish(paste(genus, species)),
+    training_species = word(full_name, 1, 2)
+  ) %>%
+  select(accession, training_species)
+```
+
+Normalizar datos de las especies
+
+```{r}
+
+# 2. Procesar ScientificName (quedarse con 2 primeras palabras)
+sra_metadata <- sra_metadata %>%
+  mutate(
+    Run = as.character(Run),
+    sra_species = word(ScientificName, 1, 2)
+  ) %>%
+  select(Run, sra_species)
+```
+
+Unir los datasets por numeros de accesion para identificar las diferencias entre las bases de datos de NCBI y CAMDA
+
+```{r}
+# 3. Unir datasets por accession/Run
+comparison <- full_join(training_dataset, sra_metadata, 
+                        by = c("accession" = "Run"))
+
+# 4. Identificar diferencias
+comparison <- comparison %>%
+  mutate(
+    match_status = case_when(
+      is.na(training_species) | is.na(sra_species) ~ "Missing",
+      training_species == sra_species ~ "Match",
+      TRUE ~ "Mismatch"
+    )
+  )
+```
+
+Ver accesiones que presentan especies distintas columna "new_species" en el archivo ManualSpeciesUpdates
+
+```{R}
+# 5. Ver accesiones con especies distintas
+discrepancies <- comparison %>%
+  filter(match_status == "Mismatch")
+
+# Mostrar los primeros registros discrepantes
+print(head(discrepancies, 10))
+
+# Guardar tabla de discrepancias si lo deseas
+write.csv(discrepancies, "discrepancias_especies.csv", row.names = FALSE)
+
+```
+
+Ver accesiones que faltan en NCBI
+```{r}
+# Resumen de NAs por columna
+na_summary <- sra_metadata %>%
+  summarise(across(everything(), ~ sum(is.na(.)))) %>%
+  pivot_longer(everything(), names_to = "columna", values_to = "num_NA") %>%
+  filter(num_NA > 0) %>%
+  arrange(desc(num_NA))
+
+print(na_summary)
+
+# Número total de valores NA en todo el dataset
+total_NA <- sum(is.na(sra_metadata))
+cat("Número total de valores NA en sra_metadata:", total_NA, "\n")
+
+# Mostrar todas las filas con al menos un NA (sin límite)
+missing_rows <- sra_metadata %>%
+  filter(if_any(everything(), is.na))
+
+print(missing_rows)
+
+
+```
+
