@@ -5,7 +5,9 @@ format: html
 editor: visual
 ---
 
-Charge R libraries
+This script was used to compare CAMDA database and NCBI data of species
+
+1.  Charge R libraries
 
 ```{r}
 # This are the libraries that we need to charge
@@ -19,14 +21,16 @@ library(readxl)
 
 ```
 
-Upload the database
+2.  Upload the database
 
 ```{r}
+#file routes of the database
+#training_dataset=CAMDA sra_metadata=NCBI
 training_dataset <- read_excel("C:/Users/52462/OneDrive/Documentos/CAMDA2025/CAMDA25/training_dataset.xlsx")
 sra_metadata <- read_excel("C:/Users/52462/OneDrive/Documentos/CAMDA2025/CAMDA25/sra-metadata.xlsx")
 ```
 
-Normalizar los titulos de las columnas de especies
+3.  Change the titles if it's necessary in the species column
 
 ```{r}
 
@@ -40,8 +44,6 @@ training_dataset <- training_dataset %>%
   select(accession, training_species)
 ```
 
-Normalizar datos de las especies
-
 ```{r}
 
 # 2. Procesar ScientificName (quedarse con 2 primeras palabras)
@@ -53,7 +55,7 @@ sra_metadata <- sra_metadata %>%
   select(Run, sra_species)
 ```
 
-Unir los datasets por numeros de accesion para identificar las diferencias entre las bases de datos de NCBI y CAMDA
+4.  Union of both dataset per accession to identify the differences between them
 
 ```{r}
 # 3. Unir datasets por accession/Run
@@ -71,7 +73,7 @@ comparison <- comparison %>%
   )
 ```
 
-Ver accesiones que presentan especies distintas columna "new_species" en el archivo ManualSpeciesUpdates
+5.   Check the accessions that are different in NCBI. This data represent the column "new_species" in the file ManualSpeciesUpdates .
 
 ```{R}
 # 5. Ver accesiones con especies distintas
@@ -86,7 +88,8 @@ write.csv(discrepancies, "discrepancias_especies.csv", row.names = FALSE)
 
 ```
 
-Ver accesiones que faltan en NCBI
+6.  Unidentified species in NCBI
+
 ```{r}
 # Resumen de NAs por columna
 na_summary <- sra_metadata %>%
@@ -109,4 +112,3 @@ print(missing_rows)
 
 
 ```
-
